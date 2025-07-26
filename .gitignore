@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# PyInstaller build files
+build/
+dist/
+*.spec
+
+# Log files
+syscache.log
+clipdata.log
+
+# VS Code files (if you're using it)
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
